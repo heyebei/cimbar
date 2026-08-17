@@ -39,6 +39,8 @@ import cv2
 import numpy
 from docopt import docopt
 from PIL import Image
+import sys
+import os
 
 from cimbar import conf
 from cimbar.deskew.deskewer import deskewer
@@ -51,6 +53,17 @@ from cimbar.util.interleave import interleave, interleave_reverse, interleaved_w
 
 
 BITS_PER_COLOR=conf.BITS_PER_COLOR
+
+
+def resource_path(rel_path):
+    """Get absolute path to resource, works for dev and for PyInstaller --onefile (sys._MEIPASS)."""
+    if getattr(sys, 'frozen', False):
+        # PyInstaller single-file extracts to a temp folder and sets _MEIPASS
+        base = sys._MEIPASS
+    else:
+        # during development, resources are relative to this file
+        base = os.path.abspath(os.path.dirname(__file__))
+    return os.path.join(base, rel_path)
 
 
 def get_deskew_params(level):
@@ -452,22 +465,22 @@ def _get_image_template(width, dark):
     img = Image.new('RGB', (width, width), color=color)
 
     suffix = 'dark' if dark else 'light'
-    anchor = Image.open(f'bitmap/anchor-{suffix}.png')
-    anchor_br = Image.open(f'bitmap/anchor-secondary-{suffix}.png')
+    anchor = Image.open(resource_path(f'bitmap/anchor-{suffix}.png'))
+    anchor_br = Image.open(resource_path(f'bitmap/anchor-secondary-{suffix}.png'))
     aw, ah = anchor.size
     img.paste(anchor, (0, 0))
     img.paste(anchor, (0, width-ah))
     img.paste(anchor, (width-aw, 0))
     img.paste(anchor_br, (width-aw, width-ah))
 
-    horizontal_guide = Image.open(f'bitmap/guide-horizontal-{suffix}.png')
+    horizontal_guide = Image.open(resource_path(f'bitmap/guide-horizontal-{suffix}.png'))
     gw, _ = horizontal_guide.size
     img.paste(horizontal_guide, (width//2 - gw//2, 2))
     img.paste(horizontal_guide, (width//2 - gw//2, width-4))
     img.paste(horizontal_guide, (width//2 - gw - gw//2, width-4))  # long bottom guide
     img.paste(horizontal_guide, (width//2 + gw - gw//2, width-4))  # ''
 
-    vertical_guide = Image.open(f'bitmap/guide-vertical-{suffix}.png')
+    vertical_guide = Image.open(resource_path(f'bitmap/guide-vertical-{suffix}.png'))
     _, gh = vertical_guide.size
     img.paste(vertical_guide, (2, width//2 - gw//2))
     img.paste(vertical_guide, (width-4, width//2 - gw//2))
@@ -579,5 +592,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
