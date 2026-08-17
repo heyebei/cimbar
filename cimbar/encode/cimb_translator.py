@@ -1,11 +1,12 @@
 from os import path
 
+import sys
 import numpy
 import imagehash
 from PIL import Image
 
+from cimbar.resources import resource_path
 
-CIMBAR_ROOT = path.abspath(path.join(path.dirname(path.realpath(__file__)), '..', '..'))
 DEFAULT_COLOR_CORRECT = {'r_min': 0, 'r_max': 255.0, 'g_min': 0, 'g_max': 255.0, 'b_min': 0, 'b_max': 255.0}
 
 
@@ -105,7 +106,7 @@ class CimbDecoder:
         self.color_clusters = None
 
         for i in range(2 ** symbol_bits):
-            name = path.join(CIMBAR_ROOT, 'bitmap', f'{symbol_bits}', f'{i:02x}.png')
+            name = resource_path(path.join('bitmap', f'{symbol_bits}', f'{i:02x}.png'))
             img = load_tile(name, self.dark)
             ahash = imagehash.average_hash(img)
             self.hashes[i] = ahash
@@ -222,7 +223,7 @@ class CimbEncoder:
         for c in range(2 ** color_bits):
             color = all_colors[c]
             for i in range(num_symbols):
-                name = path.join(CIMBAR_ROOT, 'bitmap', f'{symbol_bits}', f'{i:02x}.png')
+                name = resource_path(path.join('bitmap', f'{symbol_bits}', f'{i:02x}.png'))
                 self.img[c * num_symbols + i] = self._load_img(name, dark, color)
 
     def _load_img(self, name, dark, color):
@@ -234,4 +235,3 @@ class CimbEncoder:
 
     def encode(self, bits):
         return self.img[bits]
-
