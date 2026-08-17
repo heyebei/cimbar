@@ -1,0 +1,93 @@
+name: CI Packaging and Releases
+
+on:
+  push:
+    branches:
+      - add-resource-path-pyinstaller
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    if: github.event_name == 'push'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements || true
+          pip install pyinstaller
+
+      - name: Build (onedir) - Windows
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --name cimbar --console --onedir --add-data "bitmap;bitmap" cimbar\\cimbar.py
+
+      - name: Build (onedir) - Linux/macOS
+        if: runner.os != 'Windows'
+        run: |
+          pyinstaller --name cimbar --console --onedir --add-data "bitmap:bitmap" cimbar/cimbar.py
+
+      - name: Package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cimbar-test-${{ matrix.os }}
+          path: |
+            dist
+
+  build-release:
+    if: github.event_name == 'release'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements || true
+          pip install pyinstaller
+
+      - name: Build (onefile) - Windows
+        if: runner.os == 'Windows'
+        run: |
+          pyinstaller --name cimbar --console --onefile --add-data "bitmap;bitmap" cimbar\\cimbar.py
+          echo "ASSET=dist\\cimbar.exe" >> $GITHUB_ENV
+          echo "ASSET_NAME=cimbar-windows.exe" >> $GITHUB_ENV
+
+      - name: Build (onefile) - Linux/macOS
+        if: runner.os != 'Windows'
+        run: |
+          pyinstaller --name cimbar --console --onefile --add-data "bitmap:bitmap" cimbar/cimbar.py
+          echo "ASSET=dist/cimbar" >> $GITHUB_ENV
+          if [ "${{ runner.os }}" = "macOS" ] || [ "${{ runner.os }}" = "macos-latest" ]; then echo "ASSET_NAME=cimbar-macos" >> $GITHUB_ENV; else echo "ASSET_NAME=cimbar-linux" >> $GITHUB_ENV; fi
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
